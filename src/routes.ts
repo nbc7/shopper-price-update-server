@@ -50,6 +50,10 @@ export async function routes(app: FastifyInstance) {
       code: z.number().int().positive(),
     });
 
+    const newPriceSchema = z.object({
+      new_price: z.number().positive(),
+    });
+
     const productCodeSet = new Set();
 
     let errorList: { index: number; field: string; message: string }[] = [];
@@ -92,6 +96,22 @@ export async function routes(app: FastifyInstance) {
             index: i,
             field: error.path[0],
             message: `O código de produto esperava ${error.expected !== undefined ? error.expected : 'positive'}, recebeu ${
+              error.received !== undefined ? error.received : 'negative'
+            }.`,
+          });
+        });
+      }
+
+      try {
+        const { new_price: newPrice } = newPriceSchema.parse(data);
+      } catch (error: any) {
+        const zodError = error.errors;
+
+        zodError.map((error: any) => {
+          errorList.push({
+            index: i,
+            field: error.path[0],
+            message: `O novo preço esperava ${error.expected !== undefined ? error.expected : 'positive'}, recebeu ${
               error.received !== undefined ? error.received : 'negative'
             }.`,
           });
