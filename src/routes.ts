@@ -50,6 +50,8 @@ export async function routes(app: FastifyInstance) {
       code: z.number().int().positive(),
     });
 
+    const productCodeSet = new Set();
+
     let errorList: { index: number; field: string; message: string }[] = [];
     let productChanges: any = [];
 
@@ -58,6 +60,16 @@ export async function routes(app: FastifyInstance) {
 
       let product: Product | undefined = undefined;
       let productCodeExists = false;
+
+      if (productCodeSet.has(data.code)) {
+        errorList.push({
+          index: i,
+          field: 'productCode',
+          message: 'O código de produto foi repetido.',
+        });
+      }
+
+      productCodeSet.add(data.code);
 
       try {
         const { code: productCode } = productCodeSchema.parse(data);
