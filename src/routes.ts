@@ -12,6 +12,13 @@ interface Product {
   new_price?: number;
 }
 
+interface Pack {
+  id: number;
+  pack_id: number;
+  product_id: number;
+  qty: number;
+}
+
 export async function routes(app: FastifyInstance) {
   app.get('/products', (_, reply) => {
     const db = mysql.createConnection(connection);
@@ -39,6 +46,13 @@ export async function routes(app: FastifyInstance) {
 
     const productsData: any = await new Promise((resolve) => {
       db.query('SELECT * FROM products', (error, result) => {
+        if (error) throw error;
+        resolve(result);
+      });
+    });
+
+    const packsData: any = await new Promise((resolve) => {
+      db.query('SELECT * FROM packs', (error, result) => {
         if (error) throw error;
         resolve(result);
       });
@@ -126,6 +140,22 @@ export async function routes(app: FastifyInstance) {
               field: 'newPrice',
               message: `O novo preço não pode ter um reajuste maior ou menor que ${maxPercentage}% do preço atual.`,
             });
+          }
+
+          const pack = packsData.find((pack: Pack) => pack.pack_id === data.code);
+          const packsWithProduct = packsData.filter((pack: Pack) => pack.product_id === product?.code);
+
+          if (!pack && packsWithProduct.length > 0) {
+            const packsWithProductId = packsWithProduct.map((pack: Pack) => pack.pack_id);
+            const dataHasAllPacksWithProduct = packsWithProductId.every((pack: number) => csvData.some((data) => data.code === pack));
+
+            if (!dataHasAllPacksWithProduct) {
+              errorList.push({
+                index: i,
+                field: 'newPrice',
+                message: 'O novo preço não pode ser reajustado sem reajustar o preço de pacotes que o produto faz parte.',
+              });
+            }
           }
         }
       } catch (error: any) {
