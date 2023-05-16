@@ -157,6 +157,34 @@ export async function routes(app: FastifyInstance) {
               });
             }
           }
+
+          if (pack && pack.pack_id === product.code) {
+            const productPacks = packsData.filter((pack: Pack) => pack.pack_id === product?.code);
+            const packContents: Product[] = productPacks.map((pack: Pack) =>
+              productCodeSet.has(pack.product_id)
+                ? productChanges.find((change: Product) => change.code === pack.product_id)
+                : productsData.find((product: Product) => product.code === pack.product_id)
+            );
+
+            const totalPrice: number = parseFloat(
+              productPacks
+                .reduce((accumulator: number, pack: Pack) => {
+                  const product = packContents.find((product) => product.code === pack.product_id) as Product;
+                  const price = product.new_price || parseFloat(product.sales_price);
+
+                  return accumulator + price * pack.qty;
+                }, 0)
+                .toFixed(2)
+            );
+
+            if (newPrice !== totalPrice) {
+              errorList.push({
+                index: i,
+                field: 'newPrice',
+                message: 'O novo preço do pacote tem que ser igual ao preço da soma dos componentes do pacote.',
+              });
+            }
+          }
         }
       } catch (error: any) {
         const zodError = error.errors;
