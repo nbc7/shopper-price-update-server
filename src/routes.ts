@@ -210,4 +210,43 @@ export async function routes(app: FastifyInstance) {
 
     return reply.status(200).send({ productChanges, errorList });
   });
+
+  app.post('/update', async (req, reply) => {
+    const createHabitBody = z.object({
+      products: z.array(
+        z.object({
+          code: z.number(),
+          name: z.string(),
+          cost_price: z.string(),
+          sales_price: z.string(),
+          new_price: z.number(),
+        })
+      ),
+    });
+    const { products } = createHabitBody.parse(req.body);
+
+    const codes = products.map((product) => product.code);
+    const prices = products.map((product) => product.new_price);
+    const codePrice = codes.flatMap((code, index) => [code, prices[index]]);
+
+    const db = mysql.createConnection(connection);
+    const sql = `UPDATE products SET \`sales_price\` = CASE \`code\` ${products
+      .map(() => `WHEN ? THEN ?`)
+      .join(' ')} END WHERE \`code\` IN (${products.map(() => '?').join(',')})`;
+
+    db.connect((error) => {
+      if (error) throw error;
+    });
+
+    const updateResult: any = await new Promise((resolve) => {
+      db.query(sql, [...codePrice, ...codes], (error, result) => {
+        if (error) throw error;
+        resolve(result);
+      });
+    });
+
+    db.end();
+
+    return reply.status(200).send(updateResult);
+  });
 }
