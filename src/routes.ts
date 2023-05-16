@@ -104,6 +104,30 @@ export async function routes(app: FastifyInstance) {
 
       try {
         const { new_price: newPrice } = newPriceSchema.parse(data);
+
+        if (productCodeExists && product) {
+          const productCostPrice = parseFloat(product.cost_price);
+          const productSalesPrice = parseFloat(product.sales_price);
+
+          const maxPercentage = 10;
+          const maxPriceAdjustment = (productSalesPrice * maxPercentage) / 100;
+
+          if (newPrice < productCostPrice) {
+            errorList.push({
+              index: i,
+              field: 'newPrice',
+              message: 'O novo preço não pode ser mais baixo que o custo.',
+            });
+          }
+
+          if (newPrice > productSalesPrice + maxPriceAdjustment || newPrice < productSalesPrice - maxPriceAdjustment) {
+            errorList.push({
+              index: i,
+              field: 'newPrice',
+              message: `O novo preço não pode ter um reajuste maior ou menor que ${maxPercentage}% do preço atual.`,
+            });
+          }
+        }
       } catch (error: any) {
         const zodError = error.errors;
 
